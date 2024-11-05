@@ -25,58 +25,156 @@
         Switch to {{ isDarkMode ? 'Light' : 'Dark' }} Mode
       </button>
     </nav>
-    <div class="ticket-container">
-      <div
-        v-for="status in ticketStatuses"
-        :key="status"
-        class="ticket-column"
-        @dragover.prevent
-        @drop="onDrop($event, status)"
-      >
-        <h2>{{ status }}</h2>
-        <transition-group name="ticket" tag="div">
-          <div
-            v-for="ticket in filteredTickets(status)"
-            :key="ticket.id"
-            class="ticket-card"
-            draggable="true"
-            @dragstart="onDragStart($event, ticket)"
-            @click="openChat(ticket)"
-          >
-            <div class="ticket-header">
-              <h3>{{ ticket.title }}</h3>
-              <div class="ticket-actions">
-                <button @click.stop="editTicket(ticket)" class="btn-icon">
-                  <font-awesome-icon icon="edit" />
-                </button>
-                <button @click.stop="deleteTicket(ticket.id)" class="btn-icon">
-                  <font-awesome-icon icon="trash" />
-                </button>
-              </div>
-            </div>
-            <p class="ticket-description">{{ ticket.description }}</p>
-            <div class="ticket-info">
-              <div class="assignee-info">
-                <img :src="ticket.assigneeImage" alt="Assignee Image" class="assignee-image" />
-                <p>{{ ticket.assignee }}</p>
-              </div>
-              <div class="ticket-meta">
-                <span class="priority" :class="ticket.priority.toLowerCase()">
-                  {{ ticket.priority }} Priority
-                </span>
-                <span class="due-date">Due: {{ ticket.dueDate }}</span>
-              </div>
+    <div class="main-container">
+      <!-- Overview Panel -->
+      <div class="overview-panel" v-if="selectedTicket">
+        <div class="overview-header">
+          <h2>{{ selectedTicket.title }}</h2>
+          <button @click="deleteTicket(selectedTicket.id)" class="btn-icon delete-btn">
+            <font-awesome-icon icon="times" />
+          </button>
+        </div>
+        <div class="overview-content">
+          <div class="form-group">
+            <label>Title</label>
+            <input v-model="selectedTicket.title" :disabled="!isEditing" />
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea v-model="selectedTicket.description" :disabled="!isEditing"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Assignee</label>
+            <select
+              v-model="selectedTicket.assignee"
+              :disabled="!isEditing"
+              @change="updateAssigneeImagePanel"
+            >
+              <option v-for="agent in agents" :key="agent.name" :value="agent.name">
+                {{ agent.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Assignee Image URL</label>
+            <input
+              v-model="selectedTicket.assigneeImage"
+              :disabled="!isEditing"
+              @input="validateImageURL('panel')"
+            />
+            <div v-if="assigneeImageError" class="error-message">
+              Invalid image URL.
             </div>
           </div>
-          <!-- Placeholder Ticket -->
-          <div
-            class="ticket-card placeholder-ticket"
-            @click="openAddTicketModal(status)"
-            key="placeholder"
-          >
-            <h3>+ Add New Ticket</h3>
+          <div class="form-group">
+            <label>Priority</label>
+            <select v-model="selectedTicket.priority" :disabled="!isEditing">
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
           </div>
-        </transition-group>
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" v-model="selectedTicket.dueDate" :disabled="!isEditing" />
+          </div>
+          <div class="overview-buttons">
+            <button v-if="!isEditing" @click="enableEditing" class="btn-edit">Edit</button>
+            <div v-else>
+              <button @click="saveTicket" class="btn-save">Save</button>
+              <button @click="cancelEdit" class="btn-cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ticket Container -->
+      <div class="ticket-container">
+        <div
+          v-for="status in ticketStatuses"
+          :key="status"
+          class="ticket-column"
+          @dragover.prevent
+          @drop="onDrop($event, status)"
+        >
+          <h2>{{ status }}</h2>
+          <transition-group name="ticket" tag="div">
+            <div
+              v-for="ticket in filteredTickets(status)"
+              :key="ticket.id"
+              class="ticket-card"
+              draggable="true"
+              @dragstart="onDragStart($event, ticket)"
+              @click="selectTicket(ticket)"
+              :class="{ 'selected-ticket': ticket.id === selectedTicket?.id }"
+            >
+              <div class="ticket-header">
+                <h3>{{ ticket.title }}</h3>
+                <div class="ticket-actions">
+                  <!-- Removed edit button -->
+                  <button @click.stop="deleteTicket(ticket.id)" class="btn-icon">
+                    <font-awesome-icon icon="times" />
+                  </button>
+                </div>
+              </div>
+              <p class="ticket-description">{{ ticket.description }}</p>
+              <div class="ticket-info">
+                <div class="assignee-info">
+                  <img :src="ticket.assigneeImage" alt="Assignee Image" class="assignee-image" />
+                  <p>{{ ticket.assignee }}</p>
+                </div>
+                <div class="ticket-meta">
+                  <span class="priority" :class="ticket.priority.toLowerCase()">
+                    {{ ticket.priority }} Priority
+                  </span>
+                  <span class="due-date">Due: {{ ticket.dueDate }}</span>
+                </div>
+              </div>
+            </div>
+            <!-- Placeholder Ticket -->
+            <div
+              class="ticket-card placeholder-ticket"
+              @click="openAddTicketModal(status)"
+              key="placeholder"
+            >
+              <h3>+ Add New Ticket</h3>
+            </div>
+          </transition-group>
+        </div>
+      </div>
+
+      <!-- Chat Panel -->
+      <div class="chat-panel" v-if="selectedTicket">
+        <div class="chat-header">
+          <h2>{{ selectedTicket.title }}</h2>
+        </div>
+        <div class="messages">
+          <div
+            v-for="(message, index) in selectedTicket.chatHistory"
+            :key="index"
+            :class="['message', message.sender === 'You' ? 'sent' : 'received']"
+          >
+            <img
+              :src="getSenderImage(message.sender)"
+              alt="Sender Image"
+              class="message-image"
+            />
+            <div class="message-content">
+              <p>{{ message.text }}</p>
+              <span class="message-time">{{ message.time }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="new-message">
+          <input
+            v-model="newMessageText"
+            placeholder="Type a message..."
+            @keyup.enter="sendMessage"
+          />
+          <button @click="sendMessage" class="btn-icon">
+            <font-awesome-icon icon="paper-plane" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -132,98 +230,6 @@
         </div>
       </div>
     </transition>
-
-    <!-- Edit Ticket Modal -->
-    <transition name="modal">
-      <div v-if="isEditing" class="modal-overlay">
-        <div class="modal-content">
-          <h2>Edit Ticket</h2>
-          <div class="form-group">
-            <label>Title</label>
-            <input v-model="editTicketTitle" placeholder="Ticket Title" />
-          </div>
-          <div class="form-group">
-            <label>Description</label>
-            <textarea v-model="editTicketDescription" placeholder="Ticket Description"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Assignee</label>
-            <select v-model="editTicketAssignee" @change="updateEditAssigneeImage">
-              <option value="" disabled>Select Assignee</option>
-              <option v-for="agent in agents" :key="agent.name" :value="agent.name">
-                {{ agent.name }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Assignee Image URL</label>
-            <input
-              v-model="editTicketAssigneeImage"
-              placeholder="Assignee Image URL"
-              @input="validateImageURL('edit')"
-            />
-            <div v-if="editAssigneeImageError" class="error-message">
-              Invalid image URL.
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Priority</label>
-            <select v-model="editTicketPriority">
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Due Date</label>
-            <input type="date" v-model="editTicketDueDate" />
-          </div>
-          <div class="modal-buttons">
-            <button @click="saveTicket" class="btn-save">Save Changes</button>
-            <button @click="cancelEdit" class="btn-cancel">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
-    <!-- Chat History Modal -->
-    <transition name="modal">
-      <div v-if="showChat" class="chat-history">
-        <div class="chat-header">
-          <h2>{{ selectedTicket.title }}</h2>
-          <button @click="closeChat" class="btn-icon close-chat-btn">
-            <font-awesome-icon icon="times" />
-          </button>
-        </div>
-        <div class="messages">
-          <div
-            v-for="(message, index) in selectedTicket.chatHistory"
-            :key="index"
-            :class="['message', message.sender === 'You' ? 'sent' : 'received']"
-          >
-            <img
-              :src="getSenderImage(message.sender)"
-              alt="Sender Image"
-              class="message-image"
-            />
-            <div class="message-content">
-              <p>{{ message.text }}</p>
-              <span class="message-time">{{ message.time }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="new-message">
-          <input
-            v-model="newMessageText"
-            placeholder="Type a message..."
-            @keyup.enter="sendMessage"
-          />
-          <button @click="sendMessage" class="btn-icon">
-            <font-awesome-icon icon="paper-plane" />
-          </button>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -262,7 +268,46 @@ export default {
             { sender: 'Jane Smith', text: "I'm on it.", time: '10:05 AM' },
           ],
         },
-        // ... (other tickets)
+        {
+          id: 2,
+          title: 'Update Documentation',
+          description: 'Add documentation for the new API endpoints.',
+          status: 'In Progress',
+          assignee: 'Jane Smith',
+          assigneeImage: 'https://randomuser.me/api/portraits/women/2.jpg',
+          priority: 'Medium',
+          dueDate: '2023-12-05',
+          chatHistory: [
+            { sender: 'Jane Smith', text: 'Documentation is 50% done.', time: '2:15 PM' },
+          ],
+        },
+        {
+          id: 3,
+          title: 'Server Upgrade',
+          description: 'Upgrade the server to the latest version.',
+          status: 'To Do',
+          assignee: 'Alice Johnson',
+          assigneeImage: 'https://randomuser.me/api/portraits/women/3.jpg',
+          priority: 'High',
+          dueDate: '2023-12-10',
+          chatHistory: [
+            { sender: 'Alice Johnson', text: 'Planning the upgrade schedule.', time: '9:00 AM' },
+          ],
+        },
+        {
+          id: 4,
+          title: 'Design New Logo',
+          description: 'Create a new logo for the company.',
+          status: 'Done',
+          assignee: 'Bob Brown',
+          assigneeImage: 'https://randomuser.me/api/portraits/men/4.jpg',
+          priority: 'Low',
+          dueDate: '2023-11-20',
+          chatHistory: [
+            { sender: 'Bob Brown', text: 'Logo designs submitted.', time: '11:30 AM' },
+            { sender: 'John Doe', text: 'Great work!', time: '12:00 PM' },
+          ],
+        },
       ],
       newTicketTitle: '',
       newTicketDescription: '',
@@ -272,15 +317,8 @@ export default {
       newTicketPriority: 'Low',
       newTicketDueDate: '',
       newTicketStatus: '',
-      editTicketId: null,
-      editTicketTitle: '',
-      editTicketDescription: '',
-      editTicketAssignee: '',
-      editTicketAssigneeImage: '',
-      editAssigneeImageError: false,
-      editTicketPriority: 'Low',
-      editTicketDueDate: '',
       isEditing: false,
+      assigneeImageError: false,
       ticketStatuses: ['To Do', 'In Progress', 'Done'],
       draggedTicket: null,
       agents: [
@@ -290,7 +328,6 @@ export default {
         { name: 'Bob Brown', image: 'https://randomuser.me/api/portraits/men/4.jpg' },
       ],
       selectedTicket: null,
-      showChat: false,
       newMessageText: '',
       isDarkMode: true,
       showAddTicketModal: false,
@@ -345,41 +382,9 @@ export default {
     },
     deleteTicket(id) {
       this.tickets = this.tickets.filter((ticket) => ticket.id !== id);
-    },
-    editTicket(ticket) {
-      this.isEditing = true;
-      this.editTicketId = ticket.id;
-      this.editTicketTitle = ticket.title;
-      this.editTicketDescription = ticket.description;
-      this.editTicketAssignee = ticket.assignee;
-      this.editTicketAssigneeImage = ticket.assigneeImage;
-      this.editTicketPriority = ticket.priority;
-      this.editTicketDueDate = ticket.dueDate;
-    },
-    saveTicket() {
-      if (!this.editAssigneeImageError) {
-        const ticket = this.tickets.find((ticket) => ticket.id === this.editTicketId);
-        if (ticket) {
-          ticket.title = this.editTicketTitle;
-          ticket.description = this.editTicketDescription;
-          ticket.assignee = this.editTicketAssignee;
-          ticket.assigneeImage = this.editTicketAssigneeImage;
-          ticket.priority = this.editTicketPriority;
-          ticket.dueDate = this.editTicketDueDate;
-        }
-        this.cancelEdit();
+      if (this.selectedTicket && this.selectedTicket.id === id) {
+        this.selectedTicket = null;
       }
-    },
-    cancelEdit() {
-      this.isEditing = false;
-      this.editTicketId = null;
-      this.editTicketTitle = '';
-      this.editTicketDescription = '';
-      this.editTicketAssignee = '';
-      this.editTicketAssigneeImage = '';
-      this.editTicketPriority = 'Low';
-      this.editTicketDueDate = '';
-      this.editAssigneeImageError = false;
     },
     onDragStart(event, ticket) {
       this.draggedTicket = ticket;
@@ -390,21 +395,19 @@ export default {
         this.draggedTicket = null;
       }
     },
-    openChat(ticket) {
+    selectTicket(ticket) {
       this.selectedTicket = ticket;
-      this.showChat = true;
+      this.isEditing = false; // Reset editing state
+      this.assigneeImageError = false;
       if (!this.selectedTicket.chatHistory) {
         this.$set(this.selectedTicket, 'chatHistory', []);
       }
       this.$nextTick(() => {
         const messagesContainer = this.$el.querySelector('.messages');
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       });
-    },
-    closeChat() {
-      this.showChat = false;
-      this.selectedTicket = null;
-      this.newMessageText = '';
     },
     sendMessage() {
       if (this.newMessageText.trim() !== '') {
@@ -417,7 +420,9 @@ export default {
         this.newMessageText = '';
         this.$nextTick(() => {
           const messagesContainer = this.$el.querySelector('.messages');
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
         });
       }
     },
@@ -447,28 +452,35 @@ export default {
         this.newAssigneeImageError = false;
       }
     },
-    updateEditAssigneeImage() {
-      const agent = this.agents.find((agent) => agent.name === this.editTicketAssignee);
+    updateAssigneeImagePanel() {
+      const agent = this.agents.find((agent) => agent.name === this.selectedTicket.assignee);
       if (agent) {
-        this.editTicketAssigneeImage = agent.image;
-        this.editAssigneeImageError = false;
+        this.selectedTicket.assigneeImage = agent.image;
+        this.assigneeImageError = false;
       }
     },
     validateImageURL(type) {
-      const url = type === 'new' ? this.newTicketAssigneeImage : this.editTicketAssigneeImage;
+      let url;
+      if (type === 'new') {
+        url = this.newTicketAssigneeImage;
+      } else if (type === 'panel') {
+        url = this.selectedTicket.assigneeImage;
+      } else {
+        return;
+      }
       const img = new Image();
       img.onload = () => {
         if (type === 'new') {
           this.newAssigneeImageError = false;
-        } else {
-          this.editAssigneeImageError = false;
+        } else if (type === 'panel') {
+          this.assigneeImageError = false;
         }
       };
       img.onerror = () => {
         if (type === 'new') {
           this.newAssigneeImageError = true;
-        } else {
-          this.editAssigneeImageError = true;
+        } else if (type === 'panel') {
+          this.assigneeImageError = true;
         }
       };
       img.src = url;
@@ -480,6 +492,32 @@ export default {
         const agent = this.agents.find((agent) => agent.name === senderName);
         return agent ? agent.image : 'https://via.placeholder.com/150';
       }
+    },
+    enableEditing() {
+      this.isEditing = true;
+    },
+    saveTicket() {
+      if (this.assigneeImageError) {
+        return;
+      }
+      this.isEditing = false;
+    },
+    cancelEdit() {
+      // Revert changes by reloading the selected ticket
+      if (this.selectedTicket) {
+        const ticket = this.tickets.find((t) => t.id === this.selectedTicket.id);
+        if (ticket) {
+          // Reassign the properties
+          this.selectedTicket.title = ticket.title;
+          this.selectedTicket.description = ticket.description;
+          this.selectedTicket.assignee = ticket.assignee;
+          this.selectedTicket.assigneeImage = ticket.assigneeImage;
+          this.selectedTicket.priority = ticket.priority;
+          this.selectedTicket.dueDate = ticket.dueDate;
+        }
+      }
+      this.isEditing = false;
+      this.assigneeImageError = false;
     },
   },
 };
@@ -531,7 +569,7 @@ body {
 
 #app {
   font-family: "Roboto", sans-serif;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
   color: var(--text-color);
@@ -612,7 +650,89 @@ header h1 {
   background-color: #00bfa5;
 }
 
+/* Main container to hold overview, tickets, and chat panel */
+.main-container {
+  display: flex;
+  gap: 20px;
+}
+
+/* Overview Panel Styles */
+.overview-panel {
+  flex: 1;
+  background-color: var(--ticket-column-background);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.5s ease;
+}
+.overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.overview-header h2 {
+  margin: 0;
+  color: var(--header-color);
+}
+.delete-btn {
+  font-size: 1.2rem;
+}
+.overview-content {
+  margin-top: 20px;
+}
+.form-group {
+  margin-bottom: 15px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.overview-content input,
+.overview-content textarea,
+.overview-content select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  outline: none;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+.overview-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.btn-edit,
+.btn-save,
+.btn-cancel {
+  padding: 10px 20px;
+  background-color: var(--header-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+.btn-edit:hover,
+.btn-save:hover,
+.btn-cancel:hover {
+  background-color: #00bfa5;
+}
+.btn-cancel {
+  background-color: #f39c12;
+}
+.btn-cancel:hover {
+  background-color: #e67e22;
+}
+
+/* Ticket Container Styles */
 .ticket-container {
+  flex: 2;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -736,132 +856,30 @@ header h1 {
   margin: 0;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(18, 18, 18, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-content {
+/* Chat Panel Styles */
+.chat-panel {
+  flex: 1;
   background-color: var(--ticket-column-background);
-  padding: 30px;
-  border-radius: 12px;
-  width: 400px;
-  color: var(--text-color);
-  position: relative;
-  transition: background-color 0.5s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-.modal-content h2 {
-  margin-bottom: 20px;
-  color: var(--header-color);
-  text-align: center;
-}
-.form-group {
-  margin-bottom: 15px;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-}
-.modal-content input,
-.modal-content textarea,
-.modal-content select {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
   border: 1px solid var(--border-color);
-  background-color: var(--input-background);
-  color: var(--input-text-color);
-  outline: none;
-  transition: background-color 0.5s ease, color 0.5s ease;
-}
-.modal-content input::placeholder,
-.modal-content textarea::placeholder {
-  color: #888;
-}
-.modal-buttons {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
-}
-.btn-add,
-.btn-save,
-.btn-cancel {
-  padding: 10px 20px;
-  background-color: var(--header-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-.btn-add:hover,
-.btn-save:hover,
-.btn-cancel:hover {
-  background-color: #00bfa5;
-}
-.btn-cancel {
-  background-color: #f39c12;
-}
-.btn-cancel:hover {
-  background-color: #e67e22;
-}
-
-/* Error Message */
-.error-message {
-  color: #e74c3c;
-  font-size: 0.9rem;
-  margin-top: 5px;
-}
-
-/* Chat History Styles */
-.chat-history {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: var(--background-color);
+  border-radius: 12px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  color: var(--text-color);
-  z-index: 1000;
+  transition: background-color 0.5s ease;
 }
 .chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px 20px;
   background-color: var(--navbar-background);
+  padding: 15px;
   border-bottom: 1px solid var(--border-color);
 }
 .chat-header h2 {
   margin: 0;
   color: var(--header-color);
 }
-.close-chat-btn {
-  font-size: 1.5rem;
-  color: var(--text-color);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.close-chat-btn:hover {
-  color: var(--header-color);
-}
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 15px;
 }
 .message {
   display: flex;
@@ -898,7 +916,7 @@ header h1 {
 }
 .new-message {
   display: flex;
-  padding: 10px 20px;
+  padding: 10px 15px;
   border-top: 1px solid var(--border-color);
 }
 .new-message input {
@@ -920,6 +938,47 @@ header h1 {
 }
 .new-message button:hover {
   color: #00bfa5;
+}
+
+/* Selected Ticket Highlight */
+.selected-ticket {
+  border: 2px solid var(--header-color);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(18, 18, 18, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background-color: var(--ticket-column-background);
+  padding: 30px;
+  border-radius: 12px;
+  width: 400px;
+  color: var(--text-color);
+  position: relative;
+  transition: background-color 0.5s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+.modal-content h2 {
+  margin-bottom: 20px;
+  color: var(--header-color);
+  text-align: center;
+}
+
+/* Error Message */
+.error-message {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  margin-top: 5px;
 }
 
 /* Animations */
