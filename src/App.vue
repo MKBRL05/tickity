@@ -10,6 +10,8 @@
           <h3>{{ ticket.title }}</h3>
           <p>{{ ticket.description }}</p>
           <p><strong>Assignee:</strong> {{ ticket.assignee }}</p>
+          <p><strong>Priority:</strong> {{ ticket.priority }}</p>
+          <p><strong>Due Date:</strong> {{ ticket.dueDate }}</p>
           <div class="ticket-actions">
             <button @click="editTicket(ticket)" class="btn-edit">Edit</button>
             <button @click="deleteTicket(ticket.id)" class="btn-delete">Delete</button>
@@ -22,6 +24,12 @@
       <input v-model="newTicketTitle" placeholder="Ticket Title" />
       <textarea v-model="newTicketDescription" placeholder="Ticket Description"></textarea>
       <input v-model="newTicketAssignee" placeholder="Assignee" />
+      <select v-model="newTicketPriority">
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+      <input type="date" v-model="newTicketDueDate" />
       <button @click="addTicket" class="btn-add">Add Ticket</button>
     </div>
     <div v-if="isEditing" class="edit-ticket-form">
@@ -29,6 +37,12 @@
       <input v-model="editTicketTitle" placeholder="Ticket Title" />
       <textarea v-model="editTicketDescription" placeholder="Ticket Description"></textarea>
       <input v-model="editTicketAssignee" placeholder="Assignee" />
+      <select v-model="editTicketPriority">
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+      <input type="date" v-model="editTicketDueDate" />
       <button @click="saveTicket" class="btn-save">Save Changes</button>
       <button @click="cancelEdit" class="btn-cancel">Cancel</button>
     </div>
@@ -41,16 +55,20 @@ export default {
   data() {
     return {
       tickets: [
-        { id: 1, title: "Bug in Login Page", description: "The login page throws an error.", status: "To Do", assignee: "John Doe" },
-        { id: 2, title: "Update Documentation", description: "Add documentation for the new API endpoints.", status: "In Progress", assignee: "Jane Smith" },
+        { id: 1, title: "Bug in Login Page", description: "The login page throws an error.", status: "To Do", assignee: "John Doe", priority: "High", dueDate: "2023-12-01" },
+        { id: 2, title: "Update Documentation", description: "Add documentation for the new API endpoints.", status: "In Progress", assignee: "Jane Smith", priority: "Medium", dueDate: "2023-12-05" },
       ],
       newTicketTitle: "",
       newTicketDescription: "",
       newTicketAssignee: "",
+      newTicketPriority: "Low",
+      newTicketDueDate: "",
       editTicketId: null,
       editTicketTitle: "",
       editTicketDescription: "",
       editTicketAssignee: "",
+      editTicketPriority: "Low",
+      editTicketDueDate: "",
       isEditing: false,
       ticketStatuses: ["To Do", "In Progress", "Done"],
       draggedTicket: null,
@@ -61,17 +79,21 @@ export default {
       return this.tickets.filter((ticket) => ticket.status === status);
     },
     addTicket() {
-      if (this.newTicketTitle && this.newTicketDescription && this.newTicketAssignee) {
+      if (this.newTicketTitle && this.newTicketDescription && this.newTicketAssignee && this.newTicketDueDate) {
         this.tickets.push({
           id: this.tickets.length + 1,
           title: this.newTicketTitle,
           description: this.newTicketDescription,
           status: "To Do",
           assignee: this.newTicketAssignee,
+          priority: this.newTicketPriority,
+          dueDate: this.newTicketDueDate,
         });
         this.newTicketTitle = "";
         this.newTicketDescription = "";
         this.newTicketAssignee = "";
+        this.newTicketPriority = "Low";
+        this.newTicketDueDate = "";
       }
     },
     deleteTicket(id) {
@@ -83,6 +105,8 @@ export default {
       this.editTicketTitle = ticket.title;
       this.editTicketDescription = ticket.description;
       this.editTicketAssignee = ticket.assignee;
+      this.editTicketPriority = ticket.priority;
+      this.editTicketDueDate = ticket.dueDate;
     },
     saveTicket() {
       const ticket = this.tickets.find((ticket) => ticket.id === this.editTicketId);
@@ -90,6 +114,8 @@ export default {
         ticket.title = this.editTicketTitle;
         ticket.description = this.editTicketDescription;
         ticket.assignee = this.editTicketAssignee;
+        ticket.priority = this.editTicketPriority;
+        ticket.dueDate = this.editTicketDueDate;
       }
       this.cancelEdit();
     },
@@ -99,6 +125,8 @@ export default {
       this.editTicketTitle = "";
       this.editTicketDescription = "";
       this.editTicketAssignee = "";
+      this.editTicketPriority = "Low";
+      this.editTicketDueDate = "";
     },
     moveTicket(ticket, currentStatus) {
       const currentIndex = this.ticketStatuses.indexOf(currentStatus);
@@ -221,7 +249,9 @@ header h1 {
 .add-ticket-form input,
 .add-ticket-form textarea,
 .edit-ticket-form input,
-.edit-ticket-form textarea {
+.edit-ticket-form textarea,
+.add-ticket-form select,
+.edit-ticket-form select {
   width: 90%;
   margin: 10px 0;
   padding: 10px;
