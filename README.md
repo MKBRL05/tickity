@@ -1,90 +1,53 @@
-# Ticketr — Simplify Your Ticket Management
+# Tickity
 
+Tickity is a feature-rich, web-based Kanban board application built with Vue.js. It allows teams and individuals to manage tasks efficiently using a visual workflow. Tickity comes with essential features like task management, column customization, user authentication, dark mode, comments, subtasks, and more.
 
+![Tickity Logo](https://i.imgur.com/your-logo.png) *(Replace with your actual logo URL)*
 
-Ticketr is a simple and efficient ticket management system designed to streamline your team's workflow. Whether it's managing customer support requests, internal IT issues, or project tasks, Ticketr helps you stay organized and improve response times.
+## Table of Contents
+
+- [Features](#features)
+- [Demo](#demo)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
 ## Features
 
-- **Intuitive Dashboard**: View all your tickets in one place with a clean, user-friendly interface.
-- **Customizable Workflows**: Set up custom workflows to match the way your team operates.
-- **Priority and Status Tracking**: Easily categorize tickets by priority, status, and type.
-- **Collaboration Tools**: Assign tickets to team members and collaborate efficiently with internal comments.
-- **Notifications & Alerts**: Stay on top of tasks with real-time email and in-app notifications.
-- **Detailed Reporting**: Gain insights into your team's performance with customizable reports.
+- **Kanban Board**: Organize tasks into customizable columns like "To Do", "In Progress", "Done", and "Blocked".
+- **User Authentication**: Simple login system with user profiles.
+- **Task Management**:
+  - Create, edit, and delete tasks.
+  - Assign tasks to users.
+  - Set priorities and due dates.
+  - Add descriptions, comments, and attachments.
+  - Support for subtasks to break down larger tasks.
+- **Columns Management**: Add, rename, or delete columns to suit your workflow.
+- **Drag-and-Drop**: Reorder tasks within and across columns via intuitive drag-and-drop interface.
+- **Search and Filters**: Search tasks by title and filter by assignee.
+- **Dark Mode**: Toggle between light and dark themes.
+- **Notifications**: Visual indicators for tasks assigned to the current user.
+- **Local Storage**: All data is stored locally in the browser.
 
-## Getting Started
+## Demo
 
-### Prerequisites
+[Live Demo](#) *(Provide a link to a live demo if available.)*
 
-To get started, ensure you have:
+## Screenshots
 
-- Node.js (v14 or later)
-- MongoDB (for data storage)
+*(Include screenshots to showcase the application.)*
 
-### Installation
+![Tickity Dashboard](https://i.imgur.com/your-dashboard.png)
 
-1. Clone the repository:
+## Installation
 
-   ```bash
-   git clone https://github.com/yourusername/ticketr.git
-   ```
+To run Tickity locally, follow these steps:
 
-2. Navigate to the project directory:
-
-   ```bash
-   cd ticketr
-   ```
-
-3. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-4. Set up environment variables:
-
-   - Create a `.env` file in the root directory.
-   - Add your MongoDB connection string and other environment-specific settings.
-
-5. Start the server:
+1. **Clone the repository:**
 
    ```bash
-   npm start
-   ```
-
-6. Open your browser and go to `http://localhost:3000` to access Ticketr.
-
-## Usage
-
-1. **Create Tickets**: Use the "New Ticket" button to create support or internal requests.
-2. **Assign & Track**: Assign tickets to team members, add notes, and update statuses as you progress.
-3. **Get Insights**: Use the "Reports" section to analyze your ticket handling performance.
-
-## Contribution
-
-We welcome contributions to Ticketr! If you’d like to help, feel free to:
-
-1. Fork this repository.
-2. Create a new branch (`git checkout -b feature-branch-name`).
-3. Commit your changes (`git commit -m 'Add a new feature'`).
-4. Push to the branch (`git push origin feature-branch-name`).
-5. Open a pull request.
-
-## License
-
-Ticketr is licensed under the [MIT License](LICENSE).
-
-## Contact
-
-For support or questions, feel free to reach out:
-
-- **Email**: [support@ticketr.com](mailto\:support@ticketr.com)
-- **GitHub Issues**: [Create an issue](https://github.com/yourusername/ticketr/issues)
-
----
-
-[**Try Ticketr Now!**](http://link-to-your-live-demo.com)
-
-We’d love to hear your feedback! Feel free to star this repo if you find it useful.
-
+   git clone https://github.com/yourusername/tickity.git
+   cd tickity
